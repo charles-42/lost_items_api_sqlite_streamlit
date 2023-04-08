@@ -31,7 +31,7 @@ class LostItem(Base):
     type_objet : Mapped[str] = mapped_column(String(30),  nullable=False)
     nom_gare : Mapped[str] = mapped_column(ForeignKey(Gare.nom_gare),  nullable=False)
     date_restitution: Mapped[str] = mapped_column(String(30),  nullable=True)
-    gare: Mapped["Gare"] = relationship(back_populates="listitems")
+    gare: Mapped["Gare"] = relationship(back_populates="lostitems")
 
 class TemperatureHeure(Base):
     __tablename__ = "TemperatureHeure"

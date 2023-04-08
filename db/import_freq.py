@@ -10,6 +10,8 @@ def request_stations(station):
     station = f"&refine.nom_gare={station}"
     return URL + ressource + row_limit + station
 
+
+
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 
