@@ -7,11 +7,8 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
 
-
-engine = create_engine('sqlite:///db.sqlite')
-
 class Base(DeclarativeBase):
-    pass
+        pass
 
 class Gare(Base):
     __tablename__ = "Gare"
@@ -36,7 +33,6 @@ class LostItem(Base):
 class TemperatureHeure(Base):
     __tablename__ = "TemperatureHeure"
 
-  
     date: Mapped[str] = mapped_column(String(30),  primary_key=True)
     temperature: Mapped[float] = mapped_column(nullable=True)
 
@@ -46,22 +42,11 @@ class Temperature(Base):
     date: Mapped[str] = mapped_column(String(30),  primary_key=True)
     temperature: Mapped[float] = mapped_column(nullable=True)
 
+def create_tables(engine):
+
+    Base.metadata.create_all(engine)
     
-    
-# class Frequentation(Base):
-#     __tablename__ = "Frequentation"
 
-#     id = Column(String, primary_key=True)
-#     code_uic = Column(String, nullable=True)
-#     code_postal = Column(String, nullable=True)
-#     total_voyageurs_2016 = Column(String, nullable=True)
-#     total_voyageurs_2017 = Column(String, nullable=True)
-#     total_voyageurs_2018 = Column(String, nullable=True)
-#     total_voyageurs_2019 = Column(String, nullable=True)
-#     total_voyageurs_2020 = Column(String, nullable=True)
-#     total_voyageurs_2021 = Column(String, nullable=True)
-
-Base.metadata.create_all(engine)
-
-
-
+if __name__ == "__main__":
+    engine = create_engine('sqlite:///db.sqlite')
+    create_tables(engine)

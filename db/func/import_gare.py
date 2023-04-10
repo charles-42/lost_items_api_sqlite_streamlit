@@ -2,8 +2,6 @@ import requests
 import logging
 
 
-
-
 def request_stations(station):
     URL = "https://ressources.data.sncf.com/api/records/1.0/search/"
     ressource = "?dataset=referentiel-gares-voyageurs"

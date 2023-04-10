@@ -4,7 +4,7 @@ from datetime import datetime
 from dateparser import parse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-from .model import LostItem
+from model import LostItem
 
 
 def parse_date(start_date, end_date):
@@ -43,15 +43,11 @@ def request_by_year_and_station(station, start, end):
     return endpoint.replace(" ", "+")
 
 
-def import_lost_item(start, end):
+def import_lost_item(start, end, session):
     # Set up logging
     logging.basicConfig(level=logging.INFO)
 
     station_list = ["Paris Austerlitz", "Paris Est", "Paris Gare de Lyon", "Paris Gare du Nord", "Paris Montparnasse", "Paris Saint-Lazare", "Paris Bercy"]
-
-    engine = create_engine('sqlite:///db.sqlite')
-    Session = sessionmaker(bind=engine)
-    session = Session()
 
     session.query(LostItem).delete()
     session.commit()
@@ -65,6 +61,7 @@ def import_lost_item(start, end):
 
     for station in station_list:
         for start_date, end_date in get_year_range(start, end):
+
             my_request = requests.get(request_by_year_and_station(station, start_date, end_date))
 
             logging.info(f"request réalisée pour {start_date}, {station},{len((my_request.json()['records']))}")
@@ -83,4 +80,7 @@ def import_lost_item(start, end):
 
 
 if __name__ == "__main__":
-    import_lost_item("01 january 2018", "now")
+    engine = create_engine('sqlite:///db.sqlite')
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    import_lost_item("01 january 2018", "now",session)
