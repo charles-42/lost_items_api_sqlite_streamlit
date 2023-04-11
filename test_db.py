@@ -17,6 +17,7 @@ class TestLostItemImporter(unittest.TestCase):
         self.Session = sessionmaker(bind=self.engine)
         self.session = self.Session()
         self.importer = LostItemImporter(self.engine)
+        
 
     # def tearDown(self):
     #     self.session.close()
@@ -86,14 +87,14 @@ class TestLostItemImporter(unittest.TestCase):
         self.assertEqual(year_ranges[1], ("2023-01-01", "2023-12-31"))
         self.assertEqual(year_ranges[-1], ("2024-01-01", "2024-03-20"))
 
-    def test__create_endpoint_for_year_and_station(self):
+    def test__create_endpoint(self):
         station = "Paris Est"
         start = "2022-01-01"
         end = "2022-12-31"
         expected_endpoint = "https://ressources.data.sncf.com/api/records/1.0/search/?dataset=objets-trouves-restitution&q=date%3A%5B2022-01-01+TO+2022-12-31%5D&rows=10000&refine.gc_obo_gare_origine_r_name=Paris+Est"
 
         # Call the function and check the result
-        result = self.importer._create_endpoint_for_year_and_station(station, start, end)
+        result = self.importer._create_endpoint(station, start, end)
         self.assertEqual(result, expected_endpoint)
 
     def test__insert(self):

@@ -2,31 +2,31 @@ import requests
 import logging
 from datetime import datetime
 from dateparser import parse
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
-from .model import LostItem
+from .model import LostItem, Temperature
 from typing import List, Tuple
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
+from abc import ABCMeta, abstractmethod  # permet de définir des classes de base
+
 
 logging.basicConfig(level=logging.INFO)
 
-
-class LostItemImporter:
-
-    station_list = ["Paris Austerlitz", "Paris Est", "Paris Gare de Lyon", "Paris Gare du Nord", "Paris Montparnasse", "Paris Saint-Lazare", "Paris Bercy"]
+class Importer(metaclass = ABCMeta):
     
-    field_list = [
-        ["date", "date"],
-        ["type_objet", "gc_obo_type_c"],
-        ["nom_gare", "gc_obo_gare_origine_r_name"],
-        ["date_restitution", "gc_obo_date_heure_restitution_c"],
-    ]
-
     def __init__(self, engine: Engine):
         self.engine = engine
         self.Session = sessionmaker(bind=engine)
         self.session = self.Session()
+        self._init_attributes()
+
+
+    @abstractmethod
+    def _init_attributes(self):
+        self.TableModel = None
+        self.field_list = None
+
 
     def _parse_date(self, start_date: str, end_date: str) -> Tuple[datetime, datetime]:
         start_parse = parse(str(start_date))
@@ -52,7 +52,53 @@ class LostItemImporter:
         return year_ranges
 
 
-    def _create_endpoint_for_year_and_station(self, station: str, start: str, end: str) -> str:
+    def clean(self) -> None:
+        self.session.query(self.TableModel).delete()
+        # self.session.query(LostItem).delete()
+        self.session.commit()
+      
+    @abstractmethod
+    def import_data(self,x,y):
+        pass
+
+    @abstractmethod
+    def _create_endpoint(self):
+        pass
+
+    def _get_last_date(self) -> str:
+        date_string = self.session.query(func.max(LostItem.date)).scalar()
+        return str(datetime.fromisoformat(date_string).date())
+    
+    def update(self)-> None:
+        self.import_data(self. _get_last_date(),"now")
+
+    def _insert(self, my_request: requests.Response) -> None:
+        for row in my_request.json()["records"]:
+                    row_data = {} 
+                    for field in self.field_list:
+                        try: 
+                            row_data[field[0]] = row["fields"][field[1]]
+                        except KeyError:
+                            row_data[field[0]] = None
+
+                    # self.session.add(LostItem(**temp_data))
+                    self.session.add(self.TableModel(**row_data))
+        self.session.commit()
+
+class LostItemImporter(Importer):
+
+    station_list = ["Paris Austerlitz", "Paris Est", "Paris Gare de Lyon", "Paris Gare du Nord", "Paris Montparnasse", "Paris Saint-Lazare", "Paris Bercy"]
+
+    def _init_attributes(self):
+        self.TableModel= LostItem
+        self.field_list = [
+        ["date", "date"],
+        ["type_objet", "gc_obo_type_c"],
+        ["nom_gare", "gc_obo_gare_origine_r_name"],
+        ["date_restitution", "gc_obo_date_heure_restitution_c"],
+    ]
+
+    def _create_endpoint(self, station: str, start: str, end: str) -> str:
         URL = "https://ressources.data.sncf.com/api/records/1.0/search/"
         ressource = "?dataset=objets-trouves-restitution&q="
         date_fork = f"date%3A%5B{start}+TO+{end}%5D"
@@ -61,24 +107,8 @@ class LostItemImporter:
         endpoint = URL + ressource + date_fork + row_limit + station
         return endpoint.replace(" ", "+")
 
-    def _insert(self, my_request: requests.Response) -> None:
-        for temp in my_request.json()["records"]:
-                    temp_data = {}
 
-                    for field in self.field_list:
-                        try: 
-                            temp_data[field[0]] = temp["fields"][field[1]]
-                        except KeyError:
-                            temp_data[field[0]] = None
-
-                    self.session.add(LostItem(**temp_data))
-        self.session.commit()
-
-    def clean(self) -> None:
-        self.session.query(LostItem).delete()
-        self.session.commit()
-
-    def import_by_date(self, start_date: str, end_date: str) -> None:
+    def import_data(self, start_date: str, end_date: str) -> None:
         # Set up logging
         
         year_range  = self._get_year_range(start_date,end_date)
@@ -86,13 +116,52 @@ class LostItemImporter:
         for station in self.station_list:
             for start_date, end_date in year_range:
                 
-                my_request = requests.get(self._create_endpoint_for_year_and_station(station, start_date, end_date))
+                my_request = requests.get(self._create_endpoint(station, start_date, end_date))
 
                 logging.info(f"REQUETE: {start_date}, {station},{len((my_request.json()['records']))}")
 
                 self._insert(my_request)
                 
-                
+class TemperatureImporter(Importer):
+
+
+    def _init_attributes(self):
+        self.TableModel= Temperature
+        self.field_list = [
+            ["date", "date"],
+            ["temperature", "tc"],
+        ]
+
+    def _create_endpoint(self, start: str, end: str) -> str:
+        URL = "https://public.opendatasoft.com/api/records/1.0/search/"
+        ressource = "?dataset=donnees-synop-essentielles-omm&q="
+        date_fork = f"date%3A%5B{start}+TO+{end}%5D"
+        row_limit ="&rows=10000"
+        station = f"&refine.nom=ORLY"
+        endpoint = URL + ressource + date_fork + row_limit +station
+        return endpoint.replace(" ", "+")
+
+        # URL = "https://public.opendatasoft.com/api/records/1.0/search/"
+        # ressource = ""
+        # row_limit ="&rows=10000"
+        # station = f"&refine.nom=ORLY"
+        # year_select = f"&refine.date={year}"
+        # return URL + ressource + row_limit + station + year_select
+
+
+    def import_data(self, start_date: str, end_date: str) -> None:
+        # Set up logging
+        
+        year_range  = self._get_year_range(start_date,end_date)
+
+        for start_date, end_date in year_range:
+
+            my_request = requests.get(self._create_endpoint(start_date, end_date))
+
+            logging.info(f"REQUETE: {start_date},{len((my_request.json()['records']))}")
+
+            self._insert(my_request)
+
 
 
 if __name__ == "__main__":
