@@ -4,7 +4,7 @@ from datetime import datetime
 from dateparser import parse
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
-from .model import LostItem, Temperature
+from .model import LostItem, Temperature, Gare
 from typing import List, Tuple
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
@@ -141,14 +141,6 @@ class TemperatureImporter(Importer):
         endpoint = URL + ressource + date_fork + row_limit +station
         return endpoint.replace(" ", "+")
 
-        # URL = "https://public.opendatasoft.com/api/records/1.0/search/"
-        # ressource = ""
-        # row_limit ="&rows=10000"
-        # station = f"&refine.nom=ORLY"
-        # year_select = f"&refine.date={year}"
-        # return URL + ressource + row_limit + station + year_select
-
-
     def import_data(self, start_date: str, end_date: str) -> None:
         # Set up logging
         
@@ -162,6 +154,69 @@ class TemperatureImporter(Importer):
 
             self._insert(my_request)
 
+
+class GareImporter(Importer):
+
+    station_list = ["Paris Austerlitz", "Paris Est", "Paris Gare de Lyon", "Paris Gare du Nord", "Paris Montparnasse", "Paris Saint-Lazare", "Paris Bercy"]
+
+    def _init_attributes(self):
+        self.TableModel= Gare
+        self.field_list = [
+            ["latitude", "latitude_entreeprincipale_wgs84"],
+            ["longitude", "longitude_entreeprincipale_wgs84"],
+        ]
+
+    def _create_endpoint(self,station:str)->Tuple[str,str]:
+        URL_geo = "https://ressources.data.sncf.com/api/records/1.0/search/"
+        ressource_geo = "?dataset=referentiel-gares-voyageurs"
+        row_limit_geo ="&rows=1"
+        stationt_geo = f"&refine.gare_alias_libelle_noncontraint={station}"
+        endpoint_gare = URL_geo + ressource_geo + row_limit_geo + stationt_geo
+         
+    
+        URL_freq = "https://ressources.data.sncf.com/api/records/1.0/search/"
+        ressource_freq = "?dataset=frequentation-gares"
+        row_limit_freq ="&rows=1"
+        station_freq = f"&refine.nom_gare={station}"
+        endpoint_freq =  URL_freq + ressource_freq + row_limit_freq + station_freq
+        
+        return (endpoint_gare,endpoint_freq)
+
+
+    def import_data(self):
+        
+        for station in self.station_list:
+            if station == "Paris Bercy":
+                station_lib = "Paris Bercy Bourgogne - Pays d'Auvergne"
+                
+            else:
+                station_lib = station
+
+            my_request_geo = requests.get(self._create_endpoint(station_lib)[0])
+            my_request_freq = requests.get(self._create_endpoint(station_lib)[1])
+            
+            logging.info(f"REQUETE: {station}")
+            
+            self._insert(my_request_geo, my_request_freq, station)
+
+    def _insert(self, my_request_geo: requests.Response, my_request_freq: requests.Response, station:str) -> None:
+
+        geo_data = my_request_geo.json()["records"][0] # Only one row is collected for each station       
+        row_data = {} 
+        for field in self.field_list:
+            try: 
+                row_data[field[0]] = geo_data["fields"][field[1]]
+            except KeyError:
+                row_data[field[0]] = None
+
+        freq_data = my_request_freq.json()["records"][0]
+        row_data["freq_2019"] = freq_data["fields"]["total_voyageurs_non_voyageurs_2019"]+freq_data["fields"]["total_voyageurs_2019"]
+        row_data["freq_2020"] = freq_data["fields"]["total_voyageurs_non_voyageurs_2020"]+freq_data["fields"]["total_voyageurs_2020"]
+        row_data["freq_2021"] = freq_data["fields"]["total_voyageurs_non_voyageurs_2021"]+freq_data["fields"]["total_voyageurs_2021"]
+
+        # self.session.add(LostItem(**temp_data))
+        self.session.add(Gare(nom_gare=station,**row_data))
+        self.session.commit()
 
 
 if __name__ == "__main__":
