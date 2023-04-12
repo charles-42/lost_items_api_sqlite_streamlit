@@ -7,8 +7,10 @@ from sqlalchemy.orm import Mapped
 from sqlalchemy.orm import mapped_column
 from sqlalchemy.orm import relationship
 
+
 class Base(DeclarativeBase):
         pass
+
 
 class Gare(Base):
     __tablename__ = "Gare"
@@ -29,12 +31,6 @@ class LostItem(Base):
     nom_gare : Mapped[str] = mapped_column(ForeignKey(Gare.nom_gare),  nullable=False)
     date_restitution: Mapped[str] = mapped_column(String(30),  nullable=True)
     gare: Mapped["Gare"] = relationship(back_populates="lostitems")
-
-class TemperatureHeure(Base):
-    __tablename__ = "TemperatureHeure"
-
-    date: Mapped[str] = mapped_column(String(30),  primary_key=True)
-    temperature: Mapped[float] = mapped_column(nullable=True)
 
 class Temperature(Base):
     __tablename__ = "Temperature"

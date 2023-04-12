@@ -1,6 +1,7 @@
 db.sqlite
 trash.ipynb
 .vscode/
+to_do.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

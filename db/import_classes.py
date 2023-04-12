@@ -9,6 +9,7 @@ from typing import List, Tuple
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from abc import ABCMeta, abstractmethod  # permet de définir des classes de base
+import pandas as pd
 
 
 logging.basicConfig(level=logging.INFO)
@@ -16,6 +17,12 @@ logging.basicConfig(level=logging.INFO)
 class Importer(metaclass = ABCMeta):
     
     def __init__(self, engine: Engine):
+        """
+            Initializes a new Importer instance.
+
+            Args:
+                engine (sqlalchemy.engine.Engine): The SQLAlchemy database engine to use.
+        """
         self.engine = engine
         self.Session = sessionmaker(bind=engine)
         self.session = self.Session()
@@ -24,16 +31,41 @@ class Importer(metaclass = ABCMeta):
 
     @abstractmethod
     def _init_attributes(self):
+        """
+        Initializes the attributes needed for the Importer instance.
+
+        This method should set the `TableModel` and `field_list` attributes.
+        """
         self.TableModel = None
         self.field_list = None
 
 
     def _parse_date(self, start_date: str, end_date: str) -> Tuple[datetime, datetime]:
+        """
+        Parses the start and end dates into datetime objects.
+
+        Args:
+        start_date (str): The start date in ISO format (yyyy-mm-dd).
+        end_date (str): The end date in ISO format (yyyy-mm-dd).
+
+        Returns:
+        Tuple[datetime, datetime]: A tuple containing the start and end dates as datetime objects.
+        """
         start_parse = parse(str(start_date))
         end_parse = parse(str(end_date))
         return start_parse, end_parse
 
     def _get_year_range(self, start_date: str, end_date: str) -> List[Tuple[str, str]]:
+        """
+        Gets a list of year ranges based on the start and end dates.
+
+        Args:
+        start_date (str): The start date in ISO format (yyyy-mm-dd).
+        end_date (str): The end date in ISO format (yyyy-mm-dd).
+
+        Returns:
+        List[Tuple[str, str]]: A list of year ranges represented as tuples of (start_date, end_date).
+        """
         year_ranges = []
         start_parse, end_parse = self._parse_date(start_date,end_date)
         current_year = start_parse.year
@@ -53,6 +85,9 @@ class Importer(metaclass = ABCMeta):
 
 
     def clean(self) -> None:
+        """
+        Cleans the database by deleting all records from the TableModel.
+        """
         self.session.query(self.TableModel).delete()
         # self.session.query(LostItem).delete()
         self.session.commit()
@@ -66,30 +101,78 @@ class Importer(metaclass = ABCMeta):
         pass
 
     def _get_last_date(self) -> str:
+        """
+        Private method that retrieves the last date from the database and returns it as a string.
+
+        Returns:
+            str: Last date as a string in the format 'YYYY-MM-DD'.
+        """
         date_string = self.session.query(func.max(LostItem.date)).scalar()
         return str(datetime.fromisoformat(date_string).date())
     
     def update(self)-> None:
+        """
+        Public method that updates the database by importing new data. It retrieves the last date from the database
+        and imports data from that date up to the current date.
+        
+        Returns:
+            None.
+        """
         self.import_data(self. _get_last_date(),"now")
 
     def _insert(self, my_request: requests.Response) -> None:
-        for row in my_request.json()["records"]:
-                    row_data = {} 
-                    for field in self.field_list:
-                        try: 
-                            row_data[field[0]] = row["fields"][field[1]]
-                        except KeyError:
-                            row_data[field[0]] = None
+        """
+        Private method that inserts data into the database from a given requests.Response object.
 
-                    # self.session.add(LostItem(**temp_data))
-                    self.session.add(self.TableModel(**row_data))
+        Args:
+            my_request (requests.Response): The Response object containing the data to be inserted.
+
+        Returns:
+            None.
+        """
+        for row in my_request.json()["records"]:
+                row_data = {} 
+                for field in self.field_list:
+                    try: 
+                        row_data[field[0]] = row["fields"][field[1]]
+                    except KeyError:
+                        row_data[field[0]] = None
+
+                # self.session.add(LostItem(**temp_data))
+                self.session.add(self.TableModel(**row_data))
         self.session.commit()
 
 class LostItemImporter(Importer):
+    
+    """
+    A class for importing lost item data from the SNCF API and storing it in a database.
+
+    Attributes:
+    -----------
+    station_list : List[str]
+        A list of train stations to search for lost items.
+    TableModel : model class
+        The database model class to be used for storing the imported data.
+    field_list : List[List[str, str]]
+        A list of fields to be extracted from the API response and their corresponding database columns.
+
+    Methods:
+    --------
+    _init_attributes():
+        Initializes the class attributes.
+    _create_endpoint(station: str, start: str, end: str) -> str:
+        Creates the API endpoint URL for a given station, start date, and end date.
+    import_data(start_date: str, end_date: str) -> None:
+        Imports lost item data from the SNCF API for a given date range and saves it to the database.
+    """
 
     station_list = ["Paris Austerlitz", "Paris Est", "Paris Gare de Lyon", "Paris Gare du Nord", "Paris Montparnasse", "Paris Saint-Lazare", "Paris Bercy"]
 
     def _init_attributes(self):
+        """
+        Initializes the class attributes.
+        """
+
         self.TableModel= LostItem
         self.field_list = [
         ["date", "date"],
@@ -99,6 +182,24 @@ class LostItemImporter(Importer):
     ]
 
     def _create_endpoint(self, station: str, start: str, end: str) -> str:
+        """
+        Creates the API endpoint URL for a given station, start date, and end date.
+
+        Parameters:
+        -----------
+        station : str
+            The train station to search for lost items.
+        start : str
+            The start date for the API query in the format "YYYY-MM-DD".
+        end : str
+            The end date for the API query in the format "YYYY-MM-DD".
+
+        Returns:
+        --------
+        endpoint : str
+            The URL endpoint for the API query.
+        """
+                
         URL = "https://ressources.data.sncf.com/api/records/1.0/search/"
         ressource = "?dataset=objets-trouves-restitution&q="
         date_fork = f"date%3A%5B{start}+TO+{end}%5D"
@@ -109,6 +210,16 @@ class LostItemImporter(Importer):
 
 
     def import_data(self, start_date: str, end_date: str) -> None:
+        """
+        Imports lost item data from the SNCF API for a given date range and saves it to the database.
+
+        Parameters:
+        -----------
+        start_date : str
+            The start date for the data import in the format "YYYY-MM-DD".
+        end_date : str
+            The end date for the data import in the format "YYYY-MM-DD".
+        """
         # Set up logging
         
         year_range  = self._get_year_range(start_date,end_date)
@@ -153,6 +264,49 @@ class TemperatureImporter(Importer):
             logging.info(f"REQUETE: {start_date},{len((my_request.json()['records']))}")
 
             self._insert(my_request)
+
+    def _insert(self, my_request: requests.Response) -> None:
+        """
+        Private method that inserts data into the database from a given requests.Response object.
+
+        Args:
+            my_request (requests.Response): The Response object containing the data to be inserted.
+
+        Returns:
+            None.
+        """
+        # df = pd.DataFrame(columns=['date', 'Temperature'])
+        row_record =[]
+        for row in my_request.json()["records"]:
+            row_data = {} 
+            for field in self.field_list:
+                try: 
+                    row_data[field[0]] = row["fields"][field[1]]
+                except KeyError:
+                    row_data[field[0]] = None
+            row_record.append(row_data)        
+            # df = df.append(row_data, ignore_index=True)
+        df = pd.DataFrame.from_records(row_record)
+
+        df = self.agregate_temp_by_day(df)
+        for row in df.to_dict(orient='records'):
+            logging.debug(row)
+            self.session.add(self.TableModel(**row))
+        
+        self.session.commit()
+
+    def agregate_temp_by_day(self,df):
+        df.index = pd.to_datetime(df.date,utc=True)
+        df = df.drop(columns=["date"])
+
+        # Group by departement and day
+        df_temp = df.resample('D').agg("mean")
+
+        df_temp = df_temp.reset_index()
+        df_temp["date"] = pd.to_datetime(df_temp["date"]).dt.strftime('%Y-%m-%d')
+        # df_temp["date"] = pd.to_datetime(df_temp["date"]).dt.date
+        return df_temp
+
 
 
 class GareImporter(Importer):
