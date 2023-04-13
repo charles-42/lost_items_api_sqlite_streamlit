@@ -1,25 +1,16 @@
-from db.model import LostItem, create_tables
-from db.import_classes import LostItemImporter, TemperatureImporter, GareImporter, Importer
+from db.model import create_tables
+from db.import_classes import LostItemImporter, TemperatureImporter, GareImporter
 from sqlalchemy import create_engine
-import pandas as pd
 
 
 
 engine = create_engine('sqlite:///db.sqlite')
 
+gare_importer = GareImporter(engine)
+gare_importer.import_data()
 
+temperature_importer = TemperatureImporter(engine)
+temperature_importer.import_data("01-01-2022","now")
 
-# gare_importer = GareImporter(engine)
-# gare_importer.import_data()
-
-
-
-temperature = TemperatureImporter(engine)
-temperature.clean()
-temperature.import_data("01 january 2018","now")
-# temperature.update()
-
-# lostitem = LostItemImporter(engine)
-# # lostitem.clean()
-# lostitem.import_data("01 january 2018", "now")
-# # lostitem.update()
+lostitem_importer = LostItemImporter(engine)
+lostitem_importer.import_data("01-01-2022","now")

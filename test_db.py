@@ -23,6 +23,11 @@ class TestLostItemImporter(unittest.TestCase):
     #     self.session.close()
     #     self.engine.dispose()
 
+    def test__add(self):
+        self.assertEqual(8,8)
+        # self.assertEqual(2+2,5)
+        self.assertNotEqual(2+2,5)
+
 
     def test__parse_date_YYYY_MM_DD(self):
         start_date = "2022-01-01"

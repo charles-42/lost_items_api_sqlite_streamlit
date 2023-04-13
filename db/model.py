@@ -22,21 +22,25 @@ class Gare(Base):
     freq_2020 : Mapped[int] = mapped_column(nullable=True)
     freq_2021 : Mapped[int] = mapped_column(nullable=True)
 
-class LostItem(Base):
-    __tablename__ = "LostItem"
-
-    id : Mapped[int] = mapped_column(primary_key=True)
-    date : Mapped[str] = mapped_column(String(30),  nullable=False)
-    type_objet : Mapped[str] = mapped_column(String(30),  nullable=False)
-    nom_gare : Mapped[str] = mapped_column(ForeignKey(Gare.nom_gare),  nullable=False)
-    date_restitution: Mapped[str] = mapped_column(String(30),  nullable=True)
-    gare: Mapped["Gare"] = relationship(back_populates="lostitems")
-
 class Temperature(Base):
     __tablename__ = "Temperature"
     
     date: Mapped[str] = mapped_column(String(30),  primary_key=True)
     temperature: Mapped[float] = mapped_column(nullable=True)
+    lostitems: Mapped[List["LostItem"]] = relationship(back_populates="date_join")
+
+
+class LostItem(Base):
+    __tablename__ = "LostItem"
+
+    id : Mapped[int] = mapped_column(primary_key=True)
+    date : Mapped[str] = mapped_column(ForeignKey(Temperature.date),  nullable=False)
+    type_objet : Mapped[str] = mapped_column(String(30),  nullable=False)
+    nom_gare : Mapped[str] = mapped_column(ForeignKey(Gare.nom_gare),  nullable=False)
+    date_restitution: Mapped[str] = mapped_column(String(30),  nullable=True)
+    gare: Mapped["Gare"] = relationship(back_populates="lostitems")
+    date_join: Mapped["Temperature"] = relationship(back_populates="lostitems")
+
 
 def create_tables(engine):
 

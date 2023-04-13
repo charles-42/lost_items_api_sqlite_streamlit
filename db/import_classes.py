@@ -175,7 +175,6 @@ class LostItemImporter(Importer):
 
         self.TableModel= LostItem
         self.field_list = [
-        ["date", "date"],
         ["type_objet", "gc_obo_type_c"],
         ["nom_gare", "gc_obo_gare_origine_r_name"],
         ["date_restitution", "gc_obo_date_heure_restitution_c"],
@@ -232,6 +231,22 @@ class LostItemImporter(Importer):
                 logging.info(f"REQUETE: {start_date}, {station},{len((my_request.json()['records']))}")
 
                 self._insert(my_request)
+
+
+    def _insert(self, my_request: requests.Response) -> None:
+
+        for row in my_request.json()["records"]:
+            row_data = {} 
+            for field in self.field_list:
+                try: 
+                    row_data[field[0]] = row["fields"][field[1]]
+                except KeyError:
+                    row_data[field[0]] = None
+            row_data["date"] = row["fields"]["date"][:10]
+
+            # self.session.add(LostItem(**temp_data))
+            self.session.add(self.TableModel(**row_data))
+        self.session.commit()
                 
 class TemperatureImporter(Importer):
 

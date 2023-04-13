@@ -1,0 +1,11 @@
+
+
+ipykernel==6.22.0
+matplotlib @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_dahyf88w88/croot/matplotlib-suite_1667356719360/work
+pandas==1.5.3
+plotly==5.14.1
+requests @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_516b78ce-034d-4395-b9b5-1d78c2847384qtnol99l/croots/recipe/requests_1657734628886/work
+seaborn @ file:///private/var/folders/sy/f16zz6x50xz3113nwtb9bvq00000gp/T/abs_9fcf6pi_dk/croot/seaborn_1669625734639/work
+SQLAlchemy==2.0.9
+streamlit==1.21.0
+typing_extensions==4.5.0
