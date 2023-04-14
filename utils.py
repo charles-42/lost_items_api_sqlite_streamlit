@@ -1,5 +1,28 @@
 import plotly.express as px
 import pandas as pd
+from db.import_classes import LostItemImporter, TemperatureImporter
+from sqlalchemy import create_engine
+
+def get_importers():
+    engine = create_engine('sqlite:///db.sqlite')
+    temperature_importer = TemperatureImporter(engine)
+    lostitem_importer = LostItemImporter(engine)
+    return temperature_importer, lostitem_importer
+    
+    
+
+def last_update():
+    temperature_importer, lostitem_importer = get_importers()
+    return temperature_importer._get_last_date(), lostitem_importer._get_last_date()
+
+
+def update():
+    temperature_importer, lostitem_importer = get_importers()
+
+    temperature_importer.update()
+    lostitem_importer.update()
+
+
 
 def histogramme(df):
     fig = px.histogram(df.groupby(['type_objet','date']).size().reset_index(name='count'), x="date", y="count", color="type_objet",histfunc="sum")
@@ -94,3 +117,4 @@ def heatmap(df_lostitem):
         yaxis_title=  "Type d'objets trouvés",
     )
     return fig
+

@@ -5,7 +5,7 @@ from dateparser import parse
 from sqlalchemy import create_engine, func
 from sqlalchemy.orm import sessionmaker
 from .model import LostItem, Temperature, Gare
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from sqlalchemy.engine import Engine
 from sqlalchemy.orm import Session
 from abc import ABCMeta, abstractmethod  # permet de définir des classes de base
@@ -100,7 +100,7 @@ class Importer(metaclass = ABCMeta):
     def _create_endpoint(self):
         pass
 
-    def _get_last_date(self) -> str:
+    def _get_last_date(self) -> Optional[str]:
         """
         Private method that retrieves the last date from the database and returns it as a string.
 
@@ -108,7 +108,10 @@ class Importer(metaclass = ABCMeta):
             str: Last date as a string in the format 'YYYY-MM-DD'.
         """
         date_string = self.session.query(func.max(LostItem.date)).scalar()
-        return str(datetime.fromisoformat(date_string).date())
+        if date_string is None:
+            return None
+        else:
+            return str(datetime.fromisoformat(date_string).date())
     
     def update(self)-> None:
         """
@@ -118,7 +121,10 @@ class Importer(metaclass = ABCMeta):
         Returns:
             None.
         """
-        self.import_data(self. _get_last_date(),"now")
+        last_date = self._get_last_date()
+        start_date,end_date = self._parse_date(last_date, 'now')
+        if start_date!=end_date:
+            self.import_data(self._get_last_date(),"now")
 
     def _insert(self, my_request: requests.Response) -> None:
         """
@@ -277,8 +283,8 @@ class TemperatureImporter(Importer):
             my_request = requests.get(self._create_endpoint(start_date, end_date))
 
             logging.info(f"REQUETE: {start_date},{len((my_request.json()['records']))}")
-
-            self._insert(my_request)
+            if len((my_request.json()['records']))>0:
+                self._insert(my_request)
 
     def _insert(self, my_request: requests.Response) -> None:
         """

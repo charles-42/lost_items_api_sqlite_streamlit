@@ -6,14 +6,14 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from db.model import Base, Gare, LostItem, Temperature
 import matplotlib.pyplot as plt
-from utils import histogramme, paris_map, scatter_par_type, scatter_tous_types, boxplot, heatmap
+from utils import last_update, update, histogramme, paris_map, scatter_par_type, scatter_tous_types, boxplot, heatmap
 
 # créer une connexion à la base de données
 engine = create_engine('sqlite:///db.sqlite')
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
 
-# Importation des données
+# DOWNLOAD DATA FROM DB
 with engine.begin() as conn:
     df_lostitem = pd.read_sql(session.query(LostItem).statement, conn)
 
@@ -22,6 +22,21 @@ with engine.begin() as conn:
 
 with engine.begin() as conn:
     df_temp = pd.read_sql(session.query(Temperature).statement, conn)
+
+
+
+# DOWNLOAD AND UPDATE DATA FROM API TO DB
+last_update_dates = last_update()
+
+if  last_update_dates[0] or last_update_dates[1] :
+    st.write("Dernière mise à jour réalisée le ", min(last_update()))
+else:
+    st.warning("Les tables sont vides!")
+
+if st.button('Mettre à jour les données'):
+    update()
+    st.experimental_rerun()
+
 ####################################################################
 ###### Question 1 : Afficher sur un histogramme plotly la somme du nombre d’objets trouvés par semaine en fonction du type d'objet.
 ####################################################################
