@@ -1,4 +1,10 @@
-
+# add files to python path
+import sys
+import os
+import inspect    
+currentdir = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+parentdir = os.path.dirname(currentdir)
+sys.path.insert(0, parentdir) 
 
 import unittest
 from unittest.mock import MagicMock, patch
@@ -17,17 +23,6 @@ class TestLostItemImporter(unittest.TestCase):
         self.Session = sessionmaker(bind=self.engine)
         self.session = self.Session()
         self.importer = LostItemImporter(self.engine)
-        
-
-    # def tearDown(self):
-    #     self.session.close()
-    #     self.engine.dispose()
-
-    def test__add(self):
-        self.assertEqual(8,8)
-        # self.assertEqual(2+2,5)
-        self.assertNotEqual(2+2,5)
-
 
     def test__parse_date_YYYY_MM_DD(self):
         start_date = "2022-01-01"

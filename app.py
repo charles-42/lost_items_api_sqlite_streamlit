@@ -24,6 +24,8 @@ with engine.begin() as conn:
     df_temp = pd.read_sql(session.query(Temperature).statement, conn)
 
 
+st.title("Analyse des objets trouvés dans les gares SNCF à l'aide de l'API OpenData")
+
 
 # DOWNLOAD AND UPDATE DATA FROM API TO DB
 last_update_dates = last_update()
@@ -40,7 +42,7 @@ if st.button('Mettre à jour les données'):
 ####################################################################
 ###### Question 1 : Afficher sur un histogramme plotly la somme du nombre d’objets trouvés par semaine en fonction du type d'objet.
 ####################################################################
-st.header("1-Nombre d'objets trouvés par semaine et par type d'objet à partir de 2018")
+st.subheader("1-Nombre d'objets trouvés par semaine et par type d'objet à partir de 2018")
 
 st.plotly_chart(histogramme(df_lostitem))
 
@@ -48,13 +50,13 @@ st.plotly_chart(histogramme(df_lostitem))
 ###### Question 2 : A l'aide de plotly, Affichez une carte de Paris avec le nombre d’objets trouvés en fonction de la fréquentation de voyageur de chaque gare. Possibilité de faire varier par année et par type d’objets
 ####################################################################
 
-st.header("2-Nombre d'objets trouvés pour 1 million d'usagers")
+st.subheader("2-Nombre d'objets trouvés pour 1 million d'usagers")
 
 ######### SELECT BOX [year,type_list ] #########
-year = st.selectbox("Choose year", ["2019", "2020", "2021","2022","2023"])
+year = st.selectbox("Choisir une année", ["2019", "2020", "2021","2022","2023"])
 type_list = list(set(df_lostitem['type_objet']))
 type_list.insert(0,"Tous les types")
-type_object = st.selectbox("Choose object type",type_list)
+type_object = st.selectbox("Choisir un type d'objet",type_list)
 
 ######### FIGURE #########
 st.plotly_chart(paris_map(year,type_object, df_lostitem,df_gare ))
@@ -62,7 +64,7 @@ st.plotly_chart(paris_map(year,type_object, df_lostitem,df_gare ))
 ####################################################################
 #### Question 3 : Afficher à l'aide de seaborn le nombre d’objets trouvés par jour en fonction de la température sur un scatterplot.
 ####################################################################
-st.header("3-Nombre d'objets trouvés sur une journée en fonction de la température")
+st.subheader("3-Nombre d'objets trouvés sur une journée en fonction de la température")
 
 ######### SELECT BOX [type] #########
 type_selector = st.selectbox("", ["Tous les types d'objet","Type par type"])
@@ -77,7 +79,7 @@ else:
 ####################################################################
 ####### Question 4: Affichez un box-plot du nombre d'objet perdu par jour en fonction de la saison (été, automne, printemps, hiver).
 ####################################################################
-st.header("4-Nombre d'objets trouvés en fonction de la saison, tous types d'objet confondus")
+st.subheader("4-Nombre d'objets trouvés en fonction de la saison, tous types d'objet confondus")
 
 st.plotly_chart(boxplot(df_lostitem))
 
@@ -85,6 +87,6 @@ st.plotly_chart(boxplot(df_lostitem))
 ####### Question 5: Affichez le nombre d'objets trouvés médian par jour en fonction du type d'objet et de la saison sur une heatmap.
 ####################################################################
 
-st.header("5-Nombre d'objets trouvés en fonction de la saison et du type d'objet")
+st.subheader("5-Nombre d'objets trouvés en fonction de la saison et du type d'objet")
 
 st.plotly_chart(heatmap(df_lostitem))
